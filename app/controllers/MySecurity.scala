@@ -63,23 +63,15 @@ object MySecurity {
 
   def ClientAndReservationAction(clientID: Int, reservationID: Int) = new ActionRefiner[Request, ClientAndReservationRequest] with ActionBuilder[ClientAndReservationRequest] {
     def refine[A](request: Request[A]) = {
-      ClientDao.findById(clientID).map {
+      ClientDao.findById(clientID).flatMap {
         case Success(client) => {
-
-          //This should work to lookup and return a future reservation?
           ReservationDao.findByIdFuture(reservationID, client) map {
             case Success(reservation) => Right(new ClientAndReservationRequest(client, reservation, request))
             case Failure(excp) => Left(Results.Forbidden("Not Authorized"))
           }
 
-          //Delete this - just here to get things to compile
-          ReservationDao.findById(reservationID, client) match {
-            case Success(reservation) => Right(new ClientAndReservationRequest(client, reservation, request))
-            case Failure(excp) => Left(Results.Forbidden("Not Authorized"))
-          }
-
         }
-        case Failure(excp) => Left(Results.Forbidden("Not Authorized"))
+        case Failure(excp) => Future.successful(Left(Results.Forbidden("Not Authorized")))
       }
     }
   }
